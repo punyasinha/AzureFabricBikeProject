@@ -1,0 +1,567 @@
+{
+    "name": "pl_stg_processing_nyc_taxi",
+    "objectId": "c0cd44c7-5978-478e-abde-c1c8bf21408d",
+    "properties": {
+        "activities": [
+            {
+                "name": "v_end_date",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "CopyNYCFilestoLanding",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "variableName": "end_date",
+                    "value": {
+                        "value": "@addToTime(\n    concat(\n        substring(pipeline().parameters.file_name,16,7), '-01')\n        ,1,'Month')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "CopyNYCFilestoStaging",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "v_end_date",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "DataWarehouseSource",
+                        "additionalColumns": [
+                            {
+                                "name": "load_dte_time",
+                                "value": {
+                                    "value": "@utcNow()",
+                                    "type": "Expression"
+                                }
+                            }
+                        ],
+                        "sqlReaderStoredProcedureName": "[stg].[DATA_CLEANING_STG]",
+                        "storedProcedureParameters": {
+                            "end_date": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@variables('end_date')",
+                                    "type": "Expression"
+                                }
+                            },
+                            "start_date": {
+                                "type": "String",
+                                "value": {
+                                    "value": "@concat(substring(pipeline().parameters.file_name,16,7),'-01')",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "nyc_project_warehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "DataWarehouse",
+                                    "typeProperties": {
+                                        "endpoint": "qpb3h5yaxm6udaxi47b4kiflhi-oupiqct5fwve5dz2nldpqwn5zm.datawarehouse.fabric.microsoft.com",
+                                        "artifactId": "f6caea98-5d31-49f6-b160-9dd2eca22cc6",
+                                        "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"
+                                    }
+                                }
+                            },
+                            "type": "DataWarehouseTable",
+                            "schema": []
+                        }
+                    },
+                    "sink": {
+                        "type": "DataWarehouseSink",
+                        "allowCopyCommand": true,
+                        "tableOption": "autoCreate",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "nyc_project_warehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "DataWarehouse",
+                                    "typeProperties": {
+                                        "endpoint": "qpb3h5yaxm6udaxi47b4kiflhi-oupiqct5fwve5dz2nldpqwn5zm.datawarehouse.fabric.microsoft.com",
+                                        "artifactId": "f6caea98-5d31-49f6-b160-9dd2eca22cc6",
+                                        "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"
+                                    }
+                                }
+                            },
+                            "type": "DataWarehouseTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "schema": "stg",
+                                "table": "nyc_taxi_yellow"
+                            }
+                        }
+                    },
+                    "enableStaging": true,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                }
+            },
+            {
+                "name": "CopyNYCFilestoLanding",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "additionalColumns": [
+                            {
+                                "name": "file_name",
+                                "value": "$$FILENAME"
+                            }
+                        ],
+                        "storeSettings": {
+                            "type": "LakehouseReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        },
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "project_lakehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "Lakehouse",
+                                    "typeProperties": {
+                                        "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb",
+                                        "artifactId": "029569b3-92dc-4b19-9b9c-efd0590d140c",
+                                        "rootFolder": "Files"
+                                    }
+                                }
+                            },
+                            "type": "Parquet",
+                            "typeProperties": {
+                                "location": {
+                                    "type": "LakehouseLocation",
+                                    "fileName": {
+                                        "value": "@pipeline().parameters.file_name",
+                                        "type": "Expression"
+                                    },
+                                    "folderPath": "nyctxi_yellow"
+                                },
+                                "compressionCodec": "snappy"
+                            },
+                            "schema": []
+                        }
+                    },
+                    "sink": {
+                        "type": "DataWarehouseSink",
+                        "allowCopyCommand": true,
+                        "tableOption": "autoCreate",
+                        "disableMetricsCollection": false,
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "nyc_project_warehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "DataWarehouse",
+                                    "typeProperties": {
+                                        "endpoint": "qpb3h5yaxm6udaxi47b4kiflhi-oupiqct5fwve5dz2nldpqwn5zm.datawarehouse.fabric.microsoft.com",
+                                        "artifactId": "f6caea98-5d31-49f6-b160-9dd2eca22cc6",
+                                        "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"
+                                    }
+                                }
+                            },
+                            "type": "DataWarehouseTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "schema": "landing",
+                                "table": "nyc_taxi_yellow"
+                            }
+                        }
+                    },
+                    "enableStaging": true,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "mappings": [
+                            {
+                                "source": {
+                                    "name": "VendorID",
+                                    "type": "Int32",
+                                    "physicalType": "INT32"
+                                },
+                                "sink": {
+                                    "name": "VendorID",
+                                    "physicalType": "int"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "tpep_pickup_datetime",
+                                    "type": "DateTime",
+                                    "physicalType": "TIMESTAMP_MICROS"
+                                },
+                                "sink": {
+                                    "name": "tpep_pickup_datetime",
+                                    "physicalType": "datetime2",
+                                    "precision": 6
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "tpep_dropoff_datetime",
+                                    "type": "DateTime",
+                                    "physicalType": "TIMESTAMP_MICROS"
+                                },
+                                "sink": {
+                                    "name": "tpep_dropoff_datetime",
+                                    "physicalType": "datetime2",
+                                    "precision": 6
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "passenger_count",
+                                    "type": "Int64",
+                                    "physicalType": "INT64"
+                                },
+                                "sink": {
+                                    "name": "passenger_count",
+                                    "physicalType": "bigint"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "trip_distance",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "trip_distance",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "RatecodeID",
+                                    "type": "Int64",
+                                    "physicalType": "INT64"
+                                },
+                                "sink": {
+                                    "name": "RatecodeID",
+                                    "physicalType": "bigint"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "store_and_fwd_flag",
+                                    "type": "String",
+                                    "physicalType": "STRING"
+                                },
+                                "sink": {
+                                    "name": "store_and_fwd_flag",
+                                    "physicalType": "varchar",
+                                    "length": "8000"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "PULocationID",
+                                    "type": "Int32",
+                                    "physicalType": "INT32"
+                                },
+                                "sink": {
+                                    "name": "PULocationID",
+                                    "physicalType": "int"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "DOLocationID",
+                                    "type": "Int32",
+                                    "physicalType": "INT32"
+                                },
+                                "sink": {
+                                    "name": "DOLocationID",
+                                    "physicalType": "int"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "payment_type",
+                                    "type": "Int64",
+                                    "physicalType": "INT64"
+                                },
+                                "sink": {
+                                    "name": "payment_type",
+                                    "physicalType": "bigint"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "fare_amount",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "fare_amount",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "extra",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "extra",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "mta_tax",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "mta_tax",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "tip_amount",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "tip_amount",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "tolls_amount",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "tolls_amount",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "improvement_surcharge",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "improvement_surcharge",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "total_amount",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "total_amount",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "congestion_surcharge",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "congestion_surcharge",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "Airport_fee",
+                                    "type": "Double",
+                                    "physicalType": "DOUBLE"
+                                },
+                                "sink": {
+                                    "name": "Airport_fee",
+                                    "physicalType": "float"
+                                }
+                            },
+                            {
+                                "source": {
+                                    "name": "file_name",
+                                    "type": "String"
+                                },
+                                "sink": {
+                                    "name": "file_name",
+                                    "physicalType": "varchar",
+                                    "length": "8000"
+                                }
+                            }
+                        ],
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                }
+            },
+            {
+                "name": "sp_loading_stag_metadata",
+                "type": "SqlServerStoredProcedure",
+                "dependsOn": [
+                    {
+                        "activity": "CopyNYCFilestoStaging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "storedProcedureName": "[metadata].[insert_staging_metadata]",
+                    "storedProcedureParameters": {
+                        "pipeline_run_id": {
+                            "value": {
+                                "value": "@pipeline().RunId",
+                                "type": "Expression"
+                            },
+                            "type": "String"
+                        },
+                        "processed_date": {
+                            "value": {
+                                "value": "@pipeline().TriggerTime",
+                                "type": "Expression"
+                            },
+                            "type": "Datetime"
+                        },
+                        "table_name": {
+                            "value": "stg.nyc_taxi_yellow",
+                            "type": "String"
+                        }
+                    }
+                },
+                "linkedService": {
+                    "name": "nyc_project_warehouse",
+                    "properties": {
+                        "annotations": [],
+                        "type": "DataWarehouse",
+                        "typeProperties": {
+                            "endpoint": "qpb3h5yaxm6udaxi47b4kiflhi-oupiqct5fwve5dz2nldpqwn5zm.datawarehouse.fabric.microsoft.com",
+                            "artifactId": "f6caea98-5d31-49f6-b160-9dd2eca22cc6",
+                            "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "delete landing",
+                "type": "Script",
+                "dependsOn": [
+                    {
+                        "activity": "CopyNYCFilestoStaging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "linkedService": {
+                    "name": "nyc_project_warehouse",
+                    "properties": {
+                        "annotations": [],
+                        "type": "DataWarehouse",
+                        "typeProperties": {
+                            "endpoint": "qpb3h5yaxm6udaxi47b4kiflhi-oupiqct5fwve5dz2nldpqwn5zm.datawarehouse.fabric.microsoft.com",
+                            "artifactId": "f6caea98-5d31-49f6-b160-9dd2eca22cc6",
+                            "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"
+                        }
+                    }
+                },
+                "typeProperties": {
+                    "scripts": [
+                        {
+                            "type": "Query",
+                            "text": {
+                                "value": "delete from landing.nyc_taxi_yellow",
+                                "type": "Expression"
+                            }
+                        }
+                    ],
+                    "scriptBlockExecutionTimeout": "02:00:00"
+                }
+            }
+        ],
+        "parameters": {
+            "file_name": {
+                "type": "String"
+            }
+        },
+        "variables": {
+            "v_date": {
+                "type": "String"
+            },
+            "end_date": {
+                "type": "String"
+            }
+        },
+        "lastModifiedByObjectId": "fcc37a2b-5af7-4089-afb5-276a8b8e78c9",
+        "lastPublishTime": "2025-05-25T11:02:29Z"
+    }
+}
