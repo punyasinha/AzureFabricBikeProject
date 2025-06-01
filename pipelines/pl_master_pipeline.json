@@ -1,0 +1,47 @@
+{
+    "name": "pl_master_pipeline",
+    "objectId": "deaa1c48-8430-498d-a49d-a1a674ce3095",
+    "properties": {
+        "activities": [
+            {
+                "name": "Landing_to_staging",
+                "type": "ExecutePipeline",
+                "dependsOn": [],
+                "policy": {
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "f072a1b3-1620-4934-8525-ac46526467f1",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            },
+            {
+                "name": "Staging_to_Presentation",
+                "type": "ExecutePipeline",
+                "dependsOn": [
+                    {
+                        "activity": "Landing_to_staging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "pipeline": {
+                        "referenceName": "f312878a-9de5-41a5-b868-098eb0400b75",
+                        "type": "PipelineReference"
+                    },
+                    "waitOnCompletion": true
+                }
+            }
+        ],
+        "lastModifiedByObjectId": "fcc37a2b-5af7-4089-afb5-276a8b8e78c9",
+        "lastPublishTime": "2025-05-25T12:21:19Z"
+    }
+}
