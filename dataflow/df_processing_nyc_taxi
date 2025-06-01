@@ -1,0 +1,16 @@
+let
+  Source = Fabric.Warehouse(null),
+  Navigation = Source{[workspaceId = "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"]}[Data],
+  #"Navigation 1" = Navigation{[warehouseId = "f6caea98-5d31-49f6-b160-9dd2eca22cc6"]}[Data],
+  #"Navigation 2" = #"Navigation 1"{[Schema = "stg", Item = "nyc_taxi_yellow"]}[Data],
+  #"Removed columns" = Table.RemoveColumns(#"Navigation 2", {"RatecodeID", "store_and_fwd_flag", "fare_amount", "extra", "mta_tax", "tip_amount", "tolls_amount", "improvement_surcharge", "congestion_surcharge", "Airport_fee"}),
+  #"Inserted conditional column" = Table.AddColumn(#"Removed columns", "vendor", each if [VendorID] = 1 then "Creative Mobile Technologies" else if [VendorID] = 2 then "VeriFone" else "Unknown"),
+  #"Reordered columns" = Table.ReorderColumns(#"Inserted conditional column", {"VendorID", "vendor", "tpep_pickup_datetime", "tpep_dropoff_datetime", "passenger_count", "trip_distance", "PULocationID", "DOLocationID", "payment_type", "total_amount", "file_name", "load_dte_time"}),
+  #"Removed columns 1" = Table.RemoveColumns(#"Reordered columns", {"VendorID"}),
+  #"Inserted conditional column 1" = Table.AddColumn(#"Removed columns 1", "payment_method", each if [payment_type] = 1 then "Credit Card" else if [payment_type] = 2 then "Cash" else if [payment_type] = 3 then "No Charge" else if [payment_type] = 4 then "Dispute" else if [payment_type] = 5 then "Unknown" else if [payment_type] = 6 then "Voided Trip" else "Unknown"),
+  #"Removed columns 2" = Table.RemoveColumns(#"Inserted conditional column 1", {"payment_type"}),
+  #"Renamed columns" = Table.RenameColumns(#"Removed columns 2", {{"PULocationID", "pu_locationID"}, {"DOLocationID", "do_locationID"}}),
+  #"Calculated date" = Table.TransformColumns(#"Renamed columns", {{"tpep_pickup_datetime", each DateTime.Date(_), type nullable date}, {"tpep_dropoff_datetime", each DateTime.Date(_), type nullable date}}),
+  #"Changed column type" = Table.TransformColumnTypes(#"Calculated date", {{"vendor", type text}, {"payment_method", type text}})
+in
+  #"Changed column type"
