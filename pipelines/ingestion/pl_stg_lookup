@@ -1,0 +1,98 @@
+{
+    "name": "pl_stg_lookup",
+    "objectId": "da5cd10d-aac3-4eae-9ce4-e4bc28add451",
+    "properties": {
+        "activities": [
+            {
+                "name": "CopyLookupfileToWarehouse",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "LakehouseReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        },
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "project_lakehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "Lakehouse",
+                                    "typeProperties": {
+                                        "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb",
+                                        "artifactId": "029569b3-92dc-4b19-9b9c-efd0590d140c",
+                                        "rootFolder": "Files"
+                                    }
+                                }
+                            },
+                            "type": "DelimitedText",
+                            "typeProperties": {
+                                "location": {
+                                    "type": "LakehouseLocation",
+                                    "fileName": "taxi_zone_lookup.csv",
+                                    "folderPath": "nyctaxi_lookup_zone"
+                                },
+                                "columnDelimiter": ",",
+                                "escapeChar": "\\",
+                                "firstRowAsHeader": true,
+                                "quoteChar": "\""
+                            },
+                            "schema": []
+                        }
+                    },
+                    "sink": {
+                        "type": "DataWarehouseSink",
+                        "allowCopyCommand": true,
+                        "tableOption": "autoCreate",
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "nyc_project_warehouse",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "DataWarehouse",
+                                    "typeProperties": {
+                                        "endpoint": "qpb3h5yaxm6udaxi47b4kiflhi-oupiqct5fwve5dz2nldpqwn5zm.datawarehouse.fabric.microsoft.com",
+                                        "artifactId": "f6caea98-5d31-49f6-b160-9dd2eca22cc6",
+                                        "workspaceId": "0a881e75-2d7d-4eaa-8f3a-6ac6f859bdcb"
+                                    }
+                                }
+                            },
+                            "type": "DataWarehouseTable",
+                            "schema": [],
+                            "typeProperties": {
+                                "schema": "stg",
+                                "table": "taxi_zone"
+                            }
+                        }
+                    },
+                    "enableStaging": true,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                }
+            }
+        ],
+        "lastModifiedByObjectId": "fcc37a2b-5af7-4089-afb5-276a8b8e78c9",
+        "lastPublishTime": "2025-05-25T01:17:54Z"
+    }
+}
